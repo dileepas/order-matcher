@@ -2,6 +2,7 @@ package com.ordermatcher.service.impl;
 
 import com.ordermatcher.domain.Order;
 import com.ordermatcher.domain.OrderBook;
+import com.ordermatcher.exception.OrderMatcherException;
 import com.ordermatcher.service.OrderMatcher;
 
 import java.util.ArrayList;
@@ -17,24 +18,29 @@ public class OrderMatcherImpl implements OrderMatcher {
     }
 
     @Override
-    public void trade(Order order) {
-        if (order.getType().equals("BUY")) {
-            if (! match(order)) {
-                orderBook.addBuyOrder(order);
+    public void trade(Order order) throws OrderMatcherException {
+        try {
+            if (order.getType().equals("BUY")) {
+                if (!match(order, null)) {
+                    orderBook.addBuyOrder(order);
+                }
+            }
+            if (order.getType().equals("SELL")) {
+                List<Order> li = orderBook.getBuyOrder();
+                int i = 0;
+                while (i <= li.size() - 1) {
+                    if (match(li.get(i), order)) {
+                        orderBook.getBuyOrder().remove(i);
+                    } else i++;
+                }
+                if (order.getVolume() > 0) orderBook.addSellOrder(order);
+            }
+            if (order.getType().equals("PRINT")) {
+                displayOrders();
             }
         }
-        if (order.getType().equals("SELL")) {
-            orderBook.addSellOrder(order);
-            List<Order> li = orderBook.getBuyOrder();
-            int i =0;
-            while (i <= li.size() - 1) {
-                if (match(li.get(i))) {
-                    orderBook.getBuyOrder().remove(i);
-                } else i++;
-            }
-        }
-        if (order.getType().equals("PRINT")) {
-            displayOrders();
+        catch (Exception e) {
+            throw new  OrderMatcherException("PROCESSING_ERROR","Unable to process the trade with given values",e);
         }
     }
 
@@ -53,29 +59,51 @@ public class OrderMatcherImpl implements OrderMatcher {
         copy.forEach(System.out::println);
     }
 
-    private boolean match(Order order) {
+    private boolean match(Order buyOrder, Order activeSell) {
         int availableTotalVolume = orderBook.getSellOrder().stream().
-                filter(i -> order.getPrice() >= i.getPrice()).mapToInt(Order::getVolume).sum();
+                filter(i -> buyOrder.getPrice() >= i.getPrice()).mapToInt(Order::getVolume).sum();
+
+        availableTotalVolume = (activeSell != null && buyOrder.getPrice() >= activeSell.getPrice())
+                ? availableTotalVolume + activeSell.getVolume()
+                :availableTotalVolume;
+
 
         int i = 0;
-        if (availableTotalVolume >= order.getVolume()) {
+        if (availableTotalVolume >= buyOrder.getVolume()) {
+            if (activeSell != null &&  activeSell.getPrice() <= buyOrder.getPrice()){
+                if(activeSell.getVolume() == buyOrder.getVolume()){
+                    printTrade(activeSell.getVolume() ,activeSell.getPrice());
+                    activeSell.setVolume(0);
+                    return true;
+                }
+                else if (buyOrder.getVolume() > activeSell.getVolume()){
+                    printTrade(activeSell.getVolume() ,activeSell.getPrice());
+                    buyOrder.setVolume(buyOrder.getVolume() - activeSell.getVolume());
+                    activeSell.setVolume(0);
+                }
+                else {
+                    printTrade(buyOrder.getVolume() , activeSell.getPrice());
+                    activeSell.setVolume(activeSell.getVolume() - buyOrder.getVolume());
+                    return true;
+                }
+            }
             List<Order> sellOrderList = orderBook.getSellOrder();
-            while (true) {
-                if (sellOrderList.get(i).getPrice() <= order.getPrice()) {
+            while (i <= sellOrderList.size() - 1) {
+                if (sellOrderList.get(i).getPrice() <= buyOrder.getPrice()) {
                     Order current = sellOrderList.get(i);
-                    if (current.getVolume() == order.getVolume()) {
+                    if (current.getVolume() == buyOrder.getVolume()) {
                         orderBook.getSellOrder().remove(i);
                         printTrade( current.getVolume() , current.getPrice());
                         return true;
-                    } else if (order.getVolume() > current.getVolume()) {
+                    } else if (buyOrder.getVolume() > current.getVolume()) {
                         orderBook.getSellOrder().remove(i);
-                        order.setVolume(order.getVolume() - current.getVolume());
+                        buyOrder.setVolume(buyOrder.getVolume() - current.getVolume());
                         printTrade(current.getVolume() ,current.getPrice());
                         continue;
                     } else {
-                        current.setVolume(current.getVolume() - order.getVolume());
+                        current.setVolume(current.getVolume() - buyOrder.getVolume());
                         orderBook.getSellOrder().set(i, current);
-                        printTrade(order.getVolume() , current.getPrice());
+                        printTrade(buyOrder.getVolume() , current.getPrice());
                         return true;
                     }
                 }

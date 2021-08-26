@@ -1,6 +1,7 @@
 package com.ordermatcher;
 
 import com.ordermatcher.domain.Order;
+import com.ordermatcher.exception.OrderMatcherException;
 import com.ordermatcher.exception.ValidationException;
 import com.ordermatcher.mapper.OrderMapper;
 import com.ordermatcher.service.OrderMatcher;
@@ -20,7 +21,9 @@ public class Main {
                 Order order = OrderMapper.getOrderFromUserInput(input);
                 orderMatcher.trade(order);
             } catch (ValidationException e) {
-                System.out.println(e.getMessage());
+                System.out.println(e.getMessage() + ":" + e.getDetailMessage());
+            } catch (OrderMatcherException e) {
+                System.out.println(e.getMessage() + ":" + e.getDetailMessage());
             }
         }
     }

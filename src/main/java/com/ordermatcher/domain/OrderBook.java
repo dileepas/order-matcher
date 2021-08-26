@@ -6,8 +6,13 @@ import java.util.List;
 
 public class OrderBook {
 
-    private List<Order> sellOrder = new ArrayList<>();
-    private List<Order> buyOrder = new ArrayList<>();
+    private final List<Order> sellOrder;
+    private final List<Order> buyOrder;
+
+    public OrderBook () {
+        sellOrder = new ArrayList<>();
+        buyOrder = new ArrayList<>();
+    }
 
     public void addSellOrder(Order order) {
         sellOrder.add(order);

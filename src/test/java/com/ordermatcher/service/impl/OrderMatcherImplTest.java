@@ -1,6 +1,7 @@
 package com.ordermatcher.service.impl;
 
 import com.ordermatcher.domain.Order;
+import com.ordermatcher.exception.OrderMatcherException;
 import com.ordermatcher.mapper.OrderMapper;
 import com.ordermatcher.service.OrderMatcher;
 import org.junit.Test;
@@ -12,7 +13,7 @@ import static org.junit.Assert.assertEquals;
 public class OrderMatcherImplTest {
 
     @Test
-    public void unMatchedOrdersShouldKeepInOrderList(){
+    public void unMatchedOrdersShouldKeepInOrderList() throws OrderMatcherException {
         OrderMatcher orderMatcher = new OrderMatcherImpl();
         Order sellOrder1 = OrderMapper.getOrderFromUserInput("SELL 100@88");
         Order sellOrder2 = OrderMapper.getOrderFromUserInput("SELL 500@67");
@@ -30,7 +31,7 @@ public class OrderMatcherImplTest {
     }
 
     @Test
-    public void buyOrderHigherOrEqualThePrice_matchSeveralSells_bestMatch(){
+    public void buyOrderHigherOrEqualThePrice_matchSeveralSells_bestMatch() throws OrderMatcherException{
         OrderMatcher orderMatcher = new OrderMatcherImpl();
         Order sellOrder1 = OrderMapper.getOrderFromUserInput("SELL 100@100");
         Order sellOrder2 = OrderMapper.getOrderFromUserInput("SELL 500@50");
@@ -46,7 +47,7 @@ public class OrderMatcherImplTest {
     }
 
     @Test
-    public void buyOrderHigherOrEqualThePrice_volumeDoNotMatch(){
+    public void buyOrderHigherOrEqualThePrice_volumeDoNotMatch() throws OrderMatcherException{
         OrderMatcher orderMatcher = new OrderMatcherImpl();
         Order sellOrder1 = OrderMapper.getOrderFromUserInput("SELL 100@200");
         Order sellOrder2 = OrderMapper.getOrderFromUserInput("SELL 500@200");
@@ -61,7 +62,7 @@ public class OrderMatcherImplTest {
     }
 
     @Test
-    public void buyOrderHigherOrEqualThePrice_matchSeveralSellOrdersForGivenVolume(){
+    public void buyOrderHigherOrEqualThePrice_matchSeveralSellOrdersForGivenVolume() throws OrderMatcherException{
         OrderMatcher orderMatcher = new OrderMatcherImpl();
         Order sellOrder1 = OrderMapper.getOrderFromUserInput("SELL 100@200");
         Order sellOrder2 = OrderMapper.getOrderFromUserInput("SELL 500@100");
@@ -80,7 +81,7 @@ public class OrderMatcherImplTest {
     }
 
     @Test
-    public void firstComeFirstServerForSellingOrders(){
+    public void firstComeFirstServerForSellingOrders() throws OrderMatcherException{
         OrderMatcher orderMatcher = new OrderMatcherImpl();
         Order sellOrder1 = OrderMapper.getOrderFromUserInput("SELL 100@200");
         Order sellOrder2 = OrderMapper.getOrderFromUserInput("SELL 500@100");
@@ -99,7 +100,7 @@ public class OrderMatcherImplTest {
     }
 
     @Test
-    public void firstComeFirstServerForBuyingOrders(){
+    public void firstComeFirstServerForBuyingOrders() throws OrderMatcherException{
         OrderMatcher orderMatcher = new OrderMatcherImpl();
         Order buyOrder1 = OrderMapper.getOrderFromUserInput("BUY 100@100");
         Order buyOrder2 = OrderMapper.getOrderFromUserInput("BUY 500@100");
@@ -115,5 +116,24 @@ public class OrderMatcherImplTest {
         assertEquals(200, val.get().getVolume());
         Optional<Order> val2 = orderMatcher.getOrderBook().getSellOrder().stream().filter(i -> i.getPrice() == 90).findFirst();
         assertEquals(100, val2.get().getVolume());
+    }
+
+    @Test
+    public void priorityForActiveSell() throws OrderMatcherException{
+        OrderMatcher orderMatcher = new OrderMatcherImpl();
+        Order sellOrder1 = OrderMapper.getOrderFromUserInput("SELL 50@100");
+        Order sellOrder2 = OrderMapper.getOrderFromUserInput("SELL 100@200");
+        Order buyOrder1 = OrderMapper.getOrderFromUserInput("BUY 200@500");
+        Order sellOrder3 = OrderMapper.getOrderFromUserInput("SELL 75@400");
+        orderMatcher.trade(sellOrder1);
+        orderMatcher.trade(sellOrder2);
+        orderMatcher.trade(buyOrder1);
+        orderMatcher.trade(sellOrder3);
+        System.out.println(orderMatcher.getOrderBook().getBuyOrder());
+        System.out.println(orderMatcher.getOrderBook().getSellOrder());
+        assertEquals(0,orderMatcher.getOrderBook().getBuyOrder().size());
+        assertEquals(1,orderMatcher.getOrderBook().getSellOrder().size());
+        Optional<Order> val = orderMatcher.getOrderBook().getSellOrder().stream().findFirst();
+        assertEquals(25, val.get().getVolume());
     }
 }

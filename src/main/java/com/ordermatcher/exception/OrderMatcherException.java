@@ -1,10 +1,10 @@
 package com.ordermatcher.exception;
 
-public class ValidationException extends Exception {
+public class OrderMatcherException extends Exception {
     private String detailMessage;
 
-    public ValidationException(String messageCode, String detailMessage) {
-        super(messageCode);
+    public OrderMatcherException(String messageCode, String detailMessage, Throwable throwable) {
+        super(messageCode, throwable);
         this.detailMessage = detailMessage;
     }
 
