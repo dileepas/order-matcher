@@ -9,7 +9,7 @@ public class OrderBook {
     private final List<Order> sellOrder;
     private final List<Order> buyOrder;
 
-    public OrderBook () {
+    public OrderBook() {
         sellOrder = new ArrayList<>();
         buyOrder = new ArrayList<>();
     }

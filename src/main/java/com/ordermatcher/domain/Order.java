@@ -9,7 +9,7 @@ public class Order {
     private int price;
     private Timestamp time;
 
-    public Order(String type, int volume, int price,Timestamp time) {
+    public Order(String type, int volume, int price, Timestamp time) {
         this.type = type;
         this.volume = volume;
         this.price = price;
@@ -49,7 +49,7 @@ public class Order {
     }
 
     @Override
-    public String toString(){
-        return this.type + " " + this.volume + "@" + this.price  + ", " + this.getTime();
+    public String toString() {
+        return this.type + " " + this.volume + "@" + this.price + ", " + this.getTime();
     }
 }

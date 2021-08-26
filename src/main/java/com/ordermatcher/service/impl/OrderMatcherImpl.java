@@ -13,7 +13,7 @@ public class OrderMatcherImpl implements OrderMatcher {
 
     private final OrderBook orderBook;
 
-    public OrderMatcherImpl () {
+    public OrderMatcherImpl() {
         orderBook = new OrderBook();
     }
 
@@ -26,10 +26,10 @@ public class OrderMatcherImpl implements OrderMatcher {
                 }
             }
             if (order.getType().equals("SELL")) {
-                List<Order> li = orderBook.getBuyOrder();
+                List<Order> buyOrderList = orderBook.getBuyOrder();
                 int i = 0;
-                while (i <= li.size() - 1) {
-                    if (match(li.get(i), order)) {
+                while (i <= buyOrderList.size() - 1) {
+                    if (match(buyOrderList.get(i), order)) {
                         orderBook.getBuyOrder().remove(i);
                     } else i++;
                 }
@@ -38,9 +38,8 @@ public class OrderMatcherImpl implements OrderMatcher {
             if (order.getType().equals("PRINT")) {
                 displayOrders();
             }
-        }
-        catch (Exception e) {
-            throw new  OrderMatcherException("PROCESSING_ERROR","Unable to process the trade with given values",e);
+        } catch (Exception e) {
+            throw new OrderMatcherException("PROCESSING_ERROR", "Unable to process the trade with given values", e);
         }
     }
 
@@ -54,9 +53,9 @@ public class OrderMatcherImpl implements OrderMatcher {
         System.out.println("---------SELL-------------");
         orderBook.getSellOrder().forEach(System.out::println);
         System.out.println("---------BUY--------------");
-        List<Order> copy = new ArrayList<>(orderBook.getBuyOrder());
-        copy.sort(Comparator.comparing(Order::getPrice).reversed().thenComparing(Order::getTime));
-        copy.forEach(System.out::println);
+        List<Order> buyOrderCopy = new ArrayList<>(orderBook.getBuyOrder());
+        buyOrderCopy.sort(Comparator.comparing(Order::getPrice).reversed().thenComparing(Order::getTime));
+        buyOrderCopy.forEach(System.out::println);
     }
 
     private boolean match(Order buyOrder, Order activeSell) {
@@ -65,55 +64,67 @@ public class OrderMatcherImpl implements OrderMatcher {
 
         availableTotalVolume = (activeSell != null && buyOrder.getPrice() >= activeSell.getPrice())
                 ? availableTotalVolume + activeSell.getVolume()
-                :availableTotalVolume;
+                : availableTotalVolume;
 
-
-        int i = 0;
         if (availableTotalVolume >= buyOrder.getVolume()) {
-            if (activeSell != null &&  activeSell.getPrice() <= buyOrder.getPrice()){
-                if(activeSell.getVolume() == buyOrder.getVolume()){
-                    printTrade(activeSell.getVolume() ,activeSell.getPrice());
-                    activeSell.setVolume(0);
-                    return true;
-                }
-                else if (buyOrder.getVolume() > activeSell.getVolume()){
-                    printTrade(activeSell.getVolume() ,activeSell.getPrice());
-                    buyOrder.setVolume(buyOrder.getVolume() - activeSell.getVolume());
-                    activeSell.setVolume(0);
-                }
-                else {
-                    printTrade(buyOrder.getVolume() , activeSell.getPrice());
-                    activeSell.setVolume(activeSell.getVolume() - buyOrder.getVolume());
-                    return true;
-                }
-            }
-            List<Order> sellOrderList = orderBook.getSellOrder();
-            while (i <= sellOrderList.size() - 1) {
-                if (sellOrderList.get(i).getPrice() <= buyOrder.getPrice()) {
-                    Order current = sellOrderList.get(i);
-                    if (current.getVolume() == buyOrder.getVolume()) {
-                        orderBook.getSellOrder().remove(i);
-                        printTrade( current.getVolume() , current.getPrice());
-                        return true;
-                    } else if (buyOrder.getVolume() > current.getVolume()) {
-                        orderBook.getSellOrder().remove(i);
-                        buyOrder.setVolume(buyOrder.getVolume() - current.getVolume());
-                        printTrade(current.getVolume() ,current.getPrice());
-                        continue;
-                    } else {
-                        current.setVolume(current.getVolume() - buyOrder.getVolume());
-                        orderBook.getSellOrder().set(i, current);
-                        printTrade(buyOrder.getVolume() , current.getPrice());
-                        return true;
-                    }
-                }
-                i++;
+            boolean isTradeCompleted = checkBuyOrderWithActiveSell(buyOrder, activeSell);
+            if (isTradeCompleted) {
+                return true;
+            } else {
+                return checkBuyOrderWithAvailableSellOrders(buyOrder);
             }
         }
         return false;
     }
 
-    private void printTrade(int volume,int price) {
+    private Boolean checkBuyOrderWithActiveSell(Order buyOrder, Order activeSell) {
+        if (activeSell != null && activeSell.getPrice() <= buyOrder.getPrice()) {
+            if (activeSell.getVolume() == buyOrder.getVolume()) {
+                printTrade(activeSell.getVolume(), activeSell.getPrice());
+                activeSell.setVolume(0);
+                return true;
+            } else if (buyOrder.getVolume() > activeSell.getVolume()) {
+                printTrade(activeSell.getVolume(), activeSell.getPrice());
+                buyOrder.setVolume(buyOrder.getVolume() - activeSell.getVolume());
+                activeSell.setVolume(0);
+                return false;
+            } else {
+                printTrade(buyOrder.getVolume(), activeSell.getPrice());
+                activeSell.setVolume(activeSell.getVolume() - buyOrder.getVolume());
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Boolean checkBuyOrderWithAvailableSellOrders(Order buyOrder) {
+        int i = 0;
+        List<Order> sellOrderList = orderBook.getSellOrder();
+        while (i <= sellOrderList.size() - 1) {
+            if (sellOrderList.get(i).getPrice() <= buyOrder.getPrice()) {
+                Order current = sellOrderList.get(i);
+                if (current.getVolume() == buyOrder.getVolume()) {
+                    orderBook.getSellOrder().remove(i);
+                    printTrade(current.getVolume(), current.getPrice());
+                    return true;
+                } else if (buyOrder.getVolume() > current.getVolume()) {
+                    orderBook.getSellOrder().remove(i);
+                    buyOrder.setVolume(buyOrder.getVolume() - current.getVolume());
+                    printTrade(current.getVolume(), current.getPrice());
+                    continue;
+                } else {
+                    current.setVolume(current.getVolume() - buyOrder.getVolume());
+                    orderBook.getSellOrder().set(i, current);
+                    printTrade(buyOrder.getVolume(), current.getPrice());
+                    return true;
+                }
+            }
+            i++;
+        }
+        return false;
+    }
+
+    private void printTrade(int volume, int price) {
         System.out.println("TRADE " + volume + "@" + price);
     }
 
