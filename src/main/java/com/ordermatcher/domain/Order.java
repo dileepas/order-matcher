@@ -50,6 +50,6 @@ public class Order {
 
     @Override
     public String toString() {
-        return this.type + " " + this.volume + "@" + this.price + ", " + this.getTime();
+        return this.type + " " + this.volume + "@" + this.price;
     }
 }
